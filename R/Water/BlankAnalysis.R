@@ -88,3 +88,5 @@ pan_water_samples$PCB4_ng_g <- pan_water_samples$PCB4 / pan_water_samples$mass
 pan_water_samples$PCB18_ng_g <- pan_water_samples$PCB18 / pan_water_samples$mass
 pan_water_samples$PCB52_ng_g <- pan_water_samples$PCB52 / pan_water_samples$mass
 
+# Comparison between samples and loq @ log10 scale
+
