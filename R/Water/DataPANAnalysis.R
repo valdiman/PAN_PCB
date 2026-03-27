@@ -14,7 +14,7 @@
 }
 
 # Read data ---------------------------------------------------------------
-pan_water <- read.csv("Data/Water/data.csv")
+pan_water <- read.csv("Data/Water/dataPAN.csv")
 
 # Blank Analysis ----------------------------------------------------------
 pan_water_blank <- pan_water %>%
