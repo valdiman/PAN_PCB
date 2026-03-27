@@ -167,5 +167,8 @@ ggplot(
   geom_point() +
   facet_wrap(~ SolutionPCB)
 
+# Export data
+write.csv(pan_water_samples, file = "Output/Data/Water/PANConcentration.csv")
+
 
 
