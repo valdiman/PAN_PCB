@@ -148,6 +148,9 @@ spme_water_samples$PCB4_ng_L_loq_co <- spme_water_samples$PCB4_ng_cm_loq_co / (K
 spme_water_samples$PCB18_ng_L_loq_co <- spme_water_samples$PCB18_ng_cm_loq_co / (Kspme.18 * Vspme)
 spme_water_samples$PCB52_ng_L_loq_co <- spme_water_samples$PCB52_ng_cm_loq_co / (Kspme.52 * Vspme)
 
+# Need to remove sample: SPME_S05_WP_S. Extraction issue
+spme_water_samples <- spme_water_samples[-2,]
+
 # Summary concentrations
 summary_spme <- spme_water_samples %>%
   select(SolutionPCB, ends_with("_ng_L_loq_co")) %>%
