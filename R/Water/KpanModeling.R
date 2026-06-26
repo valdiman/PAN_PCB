@@ -7,6 +7,7 @@
   install.packages("ggplot2")
   install.packages("stringr")
   install.packages("tidyr")
+  install.packages("minpack.lm")
 }
 
 # Load Libraries
@@ -21,7 +22,7 @@
 # Read data ---------------------------------------------------------------
 dat <- read.csv("Data/Water/data_Uptake_Shaking.csv")
 
-# Remove exta rows
+# Remove extra rows
 dat <- dat %>%
   filter(sample_id != "sample_id")
 
@@ -30,8 +31,7 @@ dat_long <- dat %>%
   pivot_longer(
     cols = c(`PCB4`, `PCB18.30`, `PCB52`),
     names_to = "compound",
-    values_to = "concentration"
-  )
+    values_to = "concentration")
 
 # Change format and units
 dat_long <- dat_long %>%
@@ -47,21 +47,18 @@ dat_long <- dat_long %>%
     ),
     unit_new = case_when(
       unit == "ng" ~ "ng/kg",
-      unit == "ng/100 mL" ~ "ng/L"
-    )
-  )
+      unit == "ng/100 mL" ~ "ng/L"))
 
-# PCB4
-pcb52 <- dat_long %>%
+# Select PCB, 4, 18.30 or 52
+pcb52 <- dat_long %>% # select PCB
   filter(
-    compound == "PCB52",
-    !is.na(time_hr)
-    )
+    compound == "PCB52", # select PCB
+    !is.na(time_hr))
 
 # PAN
 pan <- dat_long %>%
   filter(
-    compound == "PCB52",
+    compound == "PCB52", # select PCB
     unit_new == "ng/kg",
     !is.na(time_hr)
   ) %>%
@@ -70,72 +67,136 @@ pan <- dat_long %>%
 
 water <- dat_long %>%
   filter(
-    compound == "PCB52",
+    compound == "PCB52", # select PCB
     unit_new == "ng/L",
     !is.na(time_hr)
   ) %>%
   mutate(replicate = str_extract(sample_id, "R\\d")) %>%
   select(time_hr, replicate, Cw = concentration_new)
 
+# Prepare modeling dataset ------------------------------------------------
 model_dat <- left_join(
   pan,
   water,
   by = c("time_hr", "replicate")
-)
-
-model_dat <- model_dat %>%
+) %>%
   mutate(
-    Kobs = Cpan / Cw
-  )
+    Kpan_obs = Cpan / Cw)
 
-summary(model_dat$Kobs)
-
-ggplot(model_dat, aes(time_hr, log10(Kobs))) +
+# Quick inspection
+ggplot(model_dat, aes(time_hr, log10(Kpan_obs))) +
   geom_point(size = 3) +
   theme_bw()
 
-fit <- nlsLM(
-  Cpan ~ Kpan * Cw * (1 - exp(-ke * time_hr)),
+# Fit first-order uptake model --------------------------------------------
+fitK <- nlsLM(
+  Kpan_obs ~ Kpan * (1 - exp(-ke * time_hr)),
   data = model_dat,
   start = list(
-    Kpan = max(model_dat$Kobs),
-    ke = 0.5
-  )
-)
+    Kpan = max(model_dat$Kpan_obs),
+    ke = 0.5))
 
-summary(fit)
+summary(fitK)
 
-model_dat <- model_dat %>%
-  mutate(
-    Kobs = Cpan / Cw
-  )
+# Extract parameter estimates ---------------------------------------------
+coef_table <- summary(fitK)$coefficients
 
-coef_fit <- coef(fit)
+Kpan <- coef_table["Kpan", "Estimate"]
+Kpan_SE <- coef_table["Kpan", "Std. Error"]
 
+ke <- coef_table["ke", "Estimate"]
+ke_SE <- coef_table["ke", "Std. Error"]
+
+t90 <- log(10) / ke
+t90_SE <- log(10) * ke_SE / ke^2
+
+# Predict fitted curve ----------------------------------------------------
 pred_dat <- data.frame(
   time_hr = seq(
     min(model_dat$time_hr),
     max(model_dat$time_hr),
-    length.out = 1000
-  )
-)
+    length.out = 1000))
 
-pred_dat$Kpred <- coef_fit["Kpan"] *
-  (1 - exp(-coef_fit["ke"] * pred_dat$time_hr))
+pred_dat <- pred_dat %>%
+  mutate(
+    Kpan_pred = Kpan * (1 - exp(-ke * time_hr)))
 
-ggplot(model_dat, aes(time_hr, Kobs)) +
-  geom_point(size = 3) +
-  geom_line(
-    data = pred_dat,
-    aes(time_hr, Kpred),
-    linewidth = 1,
-    color = "blue"
-  ) +
-  theme_bw() +
+# Plot fitted model -------------------------------------------------------
+plot.k <- ggplot(model_dat, aes(time_hr, Kpan_obs)) +
+  geom_point(size = 3, shape = 21) +
+  geom_line(data = pred_dat, aes(time_hr, Kpan_pred), linewidth = 0.5,
+            color = "black") +
+  annotate("text", x = 1, y = 20000, label = "PCB 52", hjust = 0,
+           size = 5) +
   scale_y_log10() +
-  labs(
-    x = "Time (h)",
-    y = expression(K[PAN]~"(L kg"^{-1}*")")
-  )
+  theme_classic() +
+  labs(x = "t (h)", y = expression(K[PAN]~"(L kg"^{-1}*")")) +
+  theme(
+    axis.text = element_text(face = "bold", size = 14),
+    axis.title = element_text(face = "bold", size = 14),
+    legend.text = element_text(size = 12),
+    legend.position = "right")
+
+# See plot
+plot.k
+
+# Export plot
+ggsave("Output/Plots/Water/PCB52_shaking.png",
+       plot = plot.k, width = 6, height = 5, dpi = 500)
+
+# Model diagnostics -------------------------------------------------------
+model_dat <- model_dat %>%
+  mutate(
+    fitted = predict(fitK),
+    residuals = residuals(fitK))
+
+# Residuals vs time
+ggplot(model_dat, aes(time_hr, residuals)) +
+  geom_point(size = 3) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  theme_bw()
+
+# Residuals vs fitted
+ggplot(model_dat, aes(fitted, residuals)) +
+  geom_point(size = 3) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  theme_bw()
+
+# Goodness of fit ---------------------------------------------------------
+RMSE <- sqrt(mean(model_dat$residuals^2))
+
+RSS <- sum(model_dat$residuals^2)
+TSS <- sum((model_dat$Kpan_obs - mean(model_dat$Kpan_obs))^2)
+
+R2 <- 1 - RSS / TSS
+
+fit_stats <- data.frame(
+  compound = "PCB52",
+  RMSE = RMSE,
+  R2 = R2)
+
+fit_stats
+
+# Export parameter estimates ----------------------------------------------
+results <- data.frame(
+  compound = "PCB52",
+  Kpan = Kpan,
+  Kpan_SE = Kpan_SE,
+  ke = ke,
+  ke_SE = ke_SE,
+  t90_hr = t90,
+  t90_SE = t90_SE,
+  RMSE = RMSE,
+  R2 = R2)
+
+write.csv(results, "Output/Data/Water/PCB52_kinetic_parameters_shaking.csv",
+          row.names = FALSE)
+
+
+
+
+
+
+
 
 
