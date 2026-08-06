@@ -50,15 +50,15 @@ dat_long <- dat_long %>%
       unit == "ng/100 mL" ~ "ng/L"))
 
 # Select PCB, 4, 18.30 or 52
-pcb52 <- dat_long %>% # select PCB
+pcb4 <- dat_long %>% # select PCB
   filter(
-    compound == "PCB52", # select PCB
+    compound == "PCB4", # select PCB
     !is.na(time_hr))
 
 # PAN
 pan <- dat_long %>%
   filter(
-    compound == "PCB52", # select PCB
+    compound == "PCB4", # select PCB
     unit_new == "ng/kg",
     !is.na(time_hr)
   ) %>%
@@ -67,7 +67,7 @@ pan <- dat_long %>%
 
 water <- dat_long %>%
   filter(
-    compound == "PCB52", # select PCB
+    compound == "PCB4", # select PCB
     unit_new == "ng/L",
     !is.na(time_hr)
   ) %>%
@@ -126,10 +126,10 @@ plot.k <- ggplot(model_dat, aes(time_hr, Kpan_obs)) +
   geom_point(size = 3, shape = 21) +
   geom_line(data = pred_dat, aes(time_hr, Kpan_pred), linewidth = 0.5,
             color = "black") +
-  annotate("text", x = 1, y = 10000, label = "PCB 52", hjust = 0,
+  annotate("text", x = 1, y = 10000, label = "PCB 4", hjust = 0,
            size = 5) +
   scale_y_log10() +
-  ylim(0, 10000) +
+  #ylim(0, 5000) +
   theme_classic() +
   labs(x = "t (h)", y = expression(K[PAN]~"(L kg"^{-1}*")")) +
   theme(
@@ -142,7 +142,7 @@ plot.k <- ggplot(model_dat, aes(time_hr, Kpan_obs)) +
 plot.k
 
 # Export plot
-ggsave("Output/Plots/Water/PCB52_nonshaking.png",
+ggsave("Output/Plots/Water/PCB4_nonshaking.png",
        plot = plot.k, width = 6, height = 5, dpi = 500)
 
 # Model diagnostics -------------------------------------------------------
