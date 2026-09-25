@@ -1,16 +1,17 @@
 # Code to estimate partition coefficients (Kpan)
 
-
 # Install Packages
 {
   install.packages("dplyr")
   install.packages("ggplot2")
+  install.packages("tidyr")
 }
 
 # Load Libraries
 {
   library(dplyr)
   library(ggplot2)
+  library(tidyr)
 }
 
 # Read data ---------------------------------------------------------------

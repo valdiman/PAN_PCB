@@ -50,15 +50,15 @@ dat_long <- dat_long %>%
       unit == "ng/100 mL" ~ "ng/L"))
 
 # Select PCB, 4, 18.30 or 52
-pcb52 <- dat_long %>% # select PCB
+pcb18 <- dat_long %>% # select PCB
   filter(
-    compound == "PCB52", # select PCB
+    compound == "PCB18.30", # select PCB
     !is.na(time_hr))
 
 # PAN
 pan <- dat_long %>%
   filter(
-    compound == "PCB52", # select PCB
+    compound == "PCB18.30", # select PCB
     unit_new == "ng/kg",
     !is.na(time_hr)
   ) %>%
@@ -67,7 +67,7 @@ pan <- dat_long %>%
 
 water <- dat_long %>%
   filter(
-    compound == "PCB52", # select PCB
+    compound == "PCB18.30", # select PCB
     unit_new == "ng/L",
     !is.na(time_hr)
   ) %>%
